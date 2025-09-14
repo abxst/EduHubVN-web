@@ -8,7 +8,7 @@ import institutionPendingUpdateReducer from "./slice/InstitutionPendingUpdateSli
 import partnerPendingCreateReducer from "./slice/PartnerPendingCreateSlice";
 import partnerPendingUpdateReducer from "./slice/PartnerPendingUpdateSlice";
 import degreePendingCreateReducer from "./slice/DegreePendingCreateSlice";
-import degreePendingUpdateReducer from "./slice/DegreePendingUpdateSlice";
+//import degreePendingUpdateReducer from "./slice/DegreePendingUpdateSlice";
 import lecturerReducer from "./slice/LecturerSlice";
 import institutionReducer from "./slice/InstitutionSlice";
 import partnerReducer from "./slice/PartnerSlice";
