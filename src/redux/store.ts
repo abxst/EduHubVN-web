@@ -44,7 +44,7 @@ export const store = configureStore({
     partnerPendingCreate: partnerPendingCreateReducer,
     partnerPendingUpdate: partnerPendingUpdateReducer,
     degreePendingCreate: degreePendingCreateReducer,
-    degreePendingUpdate: degreePendingUpdateReducer,
+    //degreePendingUpdate: degreePendingUpdateReducer,
     pendingLecturer: pendingLecturerReducer,
     pendingInstitution: pendingInstitutionReducer,
     pendingPartner: pendingPartnerReducer,
