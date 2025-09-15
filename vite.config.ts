@@ -10,9 +10,7 @@ export default defineConfig({
   optimizeDeps: {
     include: ['sockjs-client']
   }
-})
 
-export default {
   server: {
     proxy: {
       '/api': {
@@ -22,4 +20,8 @@ export default {
       },
     },
   },
+})
+
+export default {
+  
 };
