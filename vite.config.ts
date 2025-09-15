@@ -11,3 +11,15 @@ export default defineConfig({
     include: ['sockjs-client']
   }
 })
+
+export default {
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://14.161.18.135:8880',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
+};
