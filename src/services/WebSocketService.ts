@@ -4,7 +4,7 @@ import type { UserProfile } from "../types/UserProfile";
 
 class WebSocketService {
   private client: CompatClient | null = null;
-  private domain = window.location.hostname;
+  private domain = "14.161.18.135";
   private BASE_URL = `http://${this.domain}:8880`;
   private currentUserProfile: UserProfile | null = null;
 
