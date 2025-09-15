@@ -30,8 +30,7 @@ import type { RequestLecturerFromAdmin } from "../types/RequestLecturerFromAdmin
 import type { RequestInstitutionFromAdmin } from "../types/RequestInstitutionFromAdmin";
 import type { RequestPartnerFromAdmin } from "../types/RequestPartnerFromAdmin";
 
-//const domain = "14.161.18.135";
-const BASE_URL = "/api"; //`http://${domain}:8880`;
+const BASE_URL = "/api";
 
 const fetch = axios.create({
   baseURL: BASE_URL,
