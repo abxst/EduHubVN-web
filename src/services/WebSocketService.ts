@@ -4,8 +4,8 @@ import type { UserProfile } from "../types/UserProfile";
 
 class WebSocketService {
   private client: CompatClient | null = null;
-  private domain = "14.161.18.135";
-  private BASE_URL = `http://${this.domain}:8880`;
+  private domain = "eduhubvn.hainthvl.workers.dev";
+  private BASE_URL = `https://${this.domain}`;
   private currentUserProfile: UserProfile | null = null;
 
   connect(
