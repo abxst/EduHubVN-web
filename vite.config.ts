@@ -1,5 +1,5 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -8,9 +8,8 @@ export default defineConfig({
     global: 'globalThis',
   },
   optimizeDeps: {
-    include: ['sockjs-client']
-  }
-
+    include: ['sockjs-client'],
+  },
   server: {
     proxy: {
       '/api': {
@@ -20,8 +19,4 @@ export default defineConfig({
       },
     },
   },
-})
-
-export default {
-  
-};
+});
