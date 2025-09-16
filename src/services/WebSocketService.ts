@@ -6,7 +6,7 @@ class WebSocketService {
   private client: CompatClient | null = null;
   private domain = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_DOMAIN
   ? import.meta.env.VITE_API_DOMAIN
-  : "eduhubvn.hainthvl.workers.dev";
+  : "";
   private BASE_URL = `https://${this.domain}`;
   private currentUserProfile: UserProfile | null = null;
 

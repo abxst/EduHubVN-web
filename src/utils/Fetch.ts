@@ -32,7 +32,7 @@ import type { RequestPartnerFromAdmin } from "../types/RequestPartnerFromAdmin";
 
 const domain = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_DOMAIN
   ? import.meta.env.VITE_API_DOMAIN
-  : "eduhubvn.hainthvl.workers.dev";
+  : "";
 const BASE_URL = `https://${domain}`;
 
 const fetch = axios.create({
