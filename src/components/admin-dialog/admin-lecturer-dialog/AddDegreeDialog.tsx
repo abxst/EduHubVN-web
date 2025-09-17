@@ -28,6 +28,8 @@ interface AddDegreeDialogProps {
   onClose: () => void;
   lecturer?: any;
   onSuccess?: () => void;
+  editMode?: boolean;
+  degreeData?: any;
 }
 
 const AddDegreeDialog: React.FC<AddDegreeDialogProps> = ({
@@ -35,6 +37,8 @@ const AddDegreeDialog: React.FC<AddDegreeDialogProps> = ({
   onClose,
   lecturer,
   onSuccess,
+  editMode = false,
+  degreeData,
 }) => {
   const [form, setForm] = useState<DegreeRequest>({
     referenceId: "",
@@ -51,7 +55,7 @@ const AddDegreeDialog: React.FC<AddDegreeDialogProps> = ({
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Clear form when modal closes
+  // Clear form when modal closes or initialize with edit data
   React.useEffect(() => {
     if (!open) {
       setForm({
@@ -68,8 +72,21 @@ const AddDegreeDialog: React.FC<AddDegreeDialogProps> = ({
       setSelectedFile(null);
       setIsUploading(false);
       setIsSubmitting(false);
+    } else if (open && editMode && degreeData) {
+      // Initialize form with existing degree data for edit mode
+      setForm({
+        referenceId: degreeData.referenceId || "",
+        name: degreeData.name || "",
+        major: degreeData.major || "",
+        institution: degreeData.institution || "",
+        startYear: degreeData.startYear || 0,
+        graduationYear: degreeData.graduationYear || 0,
+        level: degreeData.level || "",
+        url: degreeData.url || "",
+        description: degreeData.description || "",
+      });
     }
-  }, [open]);
+  }, [open, editMode, degreeData]);
 
   const handleChange = (field: keyof DegreeRequest, value: string | number) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -83,24 +100,61 @@ const AddDegreeDialog: React.FC<AddDegreeDialogProps> = ({
       return;
     }
 
-    if (!lecturer?.id) {
+    if (!editMode && !lecturer?.id) {
       toast.error("Không tìm thấy thông tin giảng viên");
+      return;
+    }
+
+    if (editMode && !degreeData?.id) {
+      toast.error("Không tìm thấy thông tin bằng cấp cần chỉnh sửa");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const response = await API.admin.createDegree(form, lecturer.id);
-
-      if (response.data.success) {
-        toast.success("Thêm bằng cấp thành công!");
-        onSuccess?.();
-        onClose();
+      let response;
+      
+      if (editMode) {
+        // Update existing degree
+        const updateData = {
+          id: degreeData.id,
+          referenceId: form.referenceId,
+          name: form.name,
+          major: form.major,
+          institution: form.institution,
+          startYear: form.startYear,
+          graduationYear: form.graduationYear,
+          level: form.level,
+          url: form.url,
+          description: form.description,
+          adminNote: degreeData.adminNote || "",
+          status: degreeData.status || "PENDING",
+          createdAt: degreeData.createdAt || "",
+          updatedAt: degreeData.updatedAt || "",
+        };
+        response = await API.user.updateDegree(updateData);
+        
+        if (response.data.success) {
+          toast.success("Cập nhật bằng cấp thành công!");
+          onSuccess?.();
+          onClose();
+        } else {
+          toast.error(response.data.message || "Có lỗi xảy ra khi cập nhật bằng cấp");
+        }
       } else {
-        toast.error(response.data.message || "Có lỗi xảy ra khi thêm bằng cấp");
+        // Create new degree
+        response = await API.admin.createDegree(form, lecturer.id);
+
+        if (response.data.success) {
+          toast.success("Thêm bằng cấp thành công!");
+          onSuccess?.();
+          onClose();
+        } else {
+          toast.error(response.data.message || "Có lỗi xảy ra khi thêm bằng cấp");
+        }
       }
     } catch (error: any) {
-      console.error("Error creating degree:", error);
+      console.error(`Error ${editMode ? 'updating' : 'creating'} degree:`, error);
       toast.error(
         error.response?.data?.message || "Có lỗi xảy ra khi thêm bằng cấp",
       );
@@ -163,10 +217,10 @@ const AddDegreeDialog: React.FC<AddDegreeDialogProps> = ({
           <School />
           <Box>
             <Typography variant="h6" component="div">
-              Thêm bằng cấp mới
+              {editMode ? "Chỉnh sửa bằng cấp" : "Thêm bằng cấp mới"}
             </Typography>
             <Typography variant="body2" sx={{ opacity: 0.9 }}>
-              Thêm bằng cấp cho {lecturer?.fullName}
+              {editMode ? `Chỉnh sửa bằng cấp cho ${lecturer?.fullName || "giảng viên"}` : `Thêm bằng cấp cho ${lecturer?.fullName}`}
             </Typography>
           </Box>
         </Box>
@@ -446,10 +500,10 @@ const AddDegreeDialog: React.FC<AddDegreeDialogProps> = ({
                       size={20}
                       sx={{ mr: 1, color: "white" }}
                     />
-                    Đang thêm...
+                    Đang {editMode ? "cập nhật" : "thêm"}...
                   </>
                 ) : (
-                  "Thêm bằng cấp"
+                  editMode ? "Cập nhật bằng cấp" : "Thêm bằng cấp"
                 )}
               </Button>
             </Box>

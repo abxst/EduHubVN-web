@@ -78,6 +78,8 @@ interface AddResearchProjectDialogProps {
   onClose: () => void;
   lecturer: Lecturer;
   onSuccess: () => void;
+  editMode?: boolean;
+  projectData?: ResearchProject;
 }
 
 const AddResearchProjectDialog: React.FC<AddResearchProjectDialogProps> = ({
@@ -85,6 +87,8 @@ const AddResearchProjectDialog: React.FC<AddResearchProjectDialogProps> = ({
   onClose,
   lecturer,
   onSuccess,
+  editMode = false,
+  projectData,
 }) => {
   const [form, setForm] = useState<ResearchProject>({
     id: "",
@@ -129,8 +133,29 @@ const AddResearchProjectDialog: React.FC<AddResearchProjectDialogProps> = ({
         createdAt: "",
         updatedAt: "",
       });
+    } else if (open && editMode && projectData) {
+      // Initialize form with existing project data for edit mode
+      setForm({
+        id: projectData.id || "",
+        title: projectData.title || "",
+        researchArea: projectData.researchArea || "",
+        scale: projectData.scale || "OTHERS",
+        startDate: projectData.startDate || "",
+        endDate: projectData.endDate || "",
+        foundingAmount: projectData.foundingAmount || 0,
+        foundingSource: projectData.foundingSource || "",
+        projectType: projectData.projectType || "",
+        roleInProject: projectData.roleInProject || "",
+        publishedUrl: projectData.publishedUrl || "",
+        courseStatus: projectData.courseStatus || "",
+        description: projectData.description || "",
+        status: projectData.status || "",
+        adminNote: projectData.adminNote || "",
+        createdAt: projectData.createdAt || "",
+        updatedAt: projectData.updatedAt || "",
+      });
     }
-  }, [open]);
+  }, [open, editMode, projectData]);
 
   const handleChange = (
     field: keyof ResearchProjectRequest,
@@ -146,29 +171,50 @@ const AddResearchProjectDialog: React.FC<AddResearchProjectDialogProps> = ({
       return;
     }
 
-    if (!lecturer?.id) {
+    if (!editMode && !lecturer?.id) {
       toast.error("Không tìm thấy thông tin giảng viên");
+      return;
+    }
+
+    if (editMode && !projectData?.id) {
+      toast.error("Không tìm thấy thông tin dự án nghiên cứu cần chỉnh sửa");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const response = await API.admin.createResearchProject(form, lecturer.id);
-
-      if (response.data.success) {
-        toast.success("Thêm dự án nghiên cứu thành công!");
-        onSuccess();
-        onClose();
+      let response;
+      
+      if (editMode) {
+        // Update existing research project
+        response = await API.lecturer.updateResearchProject(form);
+        
+        if (response.data.success) {
+          toast.success("Cập nhật dự án nghiên cứu thành công!");
+          onSuccess();
+          onClose();
+        } else {
+          toast.error(response.data.message || "Có lỗi xảy ra khi cập nhật dự án nghiên cứu");
+        }
       } else {
-        toast.error(
-          response.data.message || "Có lỗi xảy ra khi thêm dự án nghiên cứu",
-        );
+        // Create new research project
+        response = await API.admin.createResearchProject(form, lecturer.id);
+
+        if (response.data.success) {
+          toast.success("Thêm dự án nghiên cứu thành công!");
+          onSuccess();
+          onClose();
+        } else {
+          toast.error(
+            response.data.message || "Có lỗi xảy ra khi thêm dự án nghiên cứu",
+          );
+        }
       }
     } catch (error: any) {
-      console.error("Error creating research project:", error);
+      console.error(`❌ Error ${editMode ? 'updating' : 'creating'} research project:`, error);
       toast.error(
         error.response?.data?.message ||
-          "Có lỗi xảy ra khi thêm dự án nghiên cứu",
+          `Có lỗi xảy ra khi ${editMode ? 'cập nhật' : 'thêm'} dự án nghiên cứu!`,
       );
     } finally {
       setIsSubmitting(false);
@@ -329,7 +375,7 @@ const AddResearchProjectDialog: React.FC<AddResearchProjectDialogProps> = ({
                   mb: 0.5,
                 }}
               >
-                Thêm dự án nghiên cứu cho {lecturer?.fullName}
+                {editMode ? "Chỉnh sửa dự án nghiên cứu" : `Thêm dự án nghiên cứu cho ${lecturer?.fullName}`}
               </Typography>
               <Typography
                 variant="body2"
@@ -337,7 +383,7 @@ const AddResearchProjectDialog: React.FC<AddResearchProjectDialogProps> = ({
                   opacity: 0.9,
                 }}
               >
-                Thông tin về dự án nghiên cứu khoa học
+                {editMode ? `Chỉnh sửa dự án nghiên cứu cho ${lecturer?.fullName || "giảng viên"}` : "Thông tin về dự án nghiên cứu khoa học"}
               </Typography>
             </Box>
           </Box>
@@ -1103,7 +1149,10 @@ const AddResearchProjectDialog: React.FC<AddResearchProjectDialogProps> = ({
               },
             }}
           >
-            {isSubmitting ? "Đang tạo..." : "Thêm dự án"}
+            {isSubmitting 
+              ? (editMode ? "Đang cập nhật..." : "Đang tạo...") 
+              : (editMode ? "Cập nhật dự án" : "Thêm dự án")
+            }
           </Button>
         </Box>
       </Box>

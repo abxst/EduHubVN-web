@@ -68,6 +68,8 @@ interface AddCertificationDialogProps {
   onClose: () => void;
   lecturer: any;
   onSuccess: () => void;
+  editMode?: boolean;
+  certificationData?: any;
 }
 
 const AddCertificationDialog: React.FC<AddCertificationDialogProps> = ({
@@ -75,6 +77,8 @@ const AddCertificationDialog: React.FC<AddCertificationDialogProps> = ({
   onClose,
   lecturer,
   onSuccess,
+  editMode = false,
+  certificationData,
 }) => {
   const [form, setForm] = useState<CertificationRequest>({
     referenceId: "",
@@ -106,8 +110,20 @@ const AddCertificationDialog: React.FC<AddCertificationDialogProps> = ({
       setSelectedFile(null);
       setIsUploading(false);
       setIsSubmitting(false);
+    } else if (open && editMode && certificationData) {
+      // Initialize form with existing certification data for edit mode
+      setForm({
+        referenceId: certificationData.referenceId || "",
+        name: certificationData.name || "",
+        issuedBy: certificationData.issuedBy || "",
+        issueDate: certificationData.issueDate ? new Date(certificationData.issueDate) : new Date(),
+        expiryDate: certificationData.expiryDate ? new Date(certificationData.expiryDate) : null,
+        certificateUrl: certificationData.certificateUrl || "",
+        level: certificationData.level || "",
+        description: certificationData.description || "",
+      });
     }
-  }, [open]);
+  }, [open, editMode, certificationData]);
 
   const handleChange = (field: keyof CertificationRequest, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -148,25 +164,61 @@ const AddCertificationDialog: React.FC<AddCertificationDialogProps> = ({
       return;
     }
 
-    if (!lecturer?.id) {
+    if (!editMode && !lecturer?.id) {
       toast.error("Không tìm thấy thông tin giảng viên");
+      return;
+    }
+
+    if (editMode && !certificationData?.id) {
+      toast.error("Không tìm thấy thông tin chứng chỉ cần chỉnh sửa");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const response = await API.admin.createCertification(form, lecturer.id);
-
-      if (response.data.success) {
-        toast.success("Thêm chứng chỉ thành công!");
-        onSuccess();
-        onClose();
+      let response;
+      
+      if (editMode) {
+        // Update existing certification
+        const updateData = {
+          id: certificationData.id,
+          referenceId: form.referenceId,
+          name: form.name,
+          issuedBy: form.issuedBy,
+          issueDate: form.issueDate.toISOString(),
+          expiryDate: form.expiryDate ? form.expiryDate.toISOString() : "",
+          certificateUrl: form.certificateUrl,
+          level: form.level,
+          description: form.description,
+          adminNote: certificationData.adminNote || "",
+          status: certificationData.status || "PENDING",
+          createdAt: certificationData.createdAt || "",
+          updatedAt: certificationData.updatedAt || "",
+        };
+        response = await API.user.updateCertification(updateData);
+        
+        if (response.data.success) {
+          toast.success("Cập nhật chứng chỉ thành công!");
+          onSuccess();
+          onClose();
+        } else {
+          toast.error(response.data.message || "Có lỗi xảy ra khi cập nhật chứng chỉ");
+        }
       } else {
-        toast.error(response.data.message || "Thêm chứng chỉ thất bại!");
+        // Create new certification
+        response = await API.admin.createCertification(form, lecturer.id);
+
+        if (response.data.success) {
+          toast.success("Thêm chứng chỉ thành công!");
+          onSuccess();
+          onClose();
+        } else {
+          toast.error(response.data.message || "Thêm chứng chỉ thất bại!");
+        }
       }
     } catch (error: any) {
-      console.error("❌ Error creating certification:", error);
-      toast.error(error.message || "Có lỗi xảy ra khi thêm chứng chỉ!");
+      console.error(`❌ Error ${editMode ? 'updating' : 'creating'} certification:`, error);
+      toast.error(error.message || `Có lỗi xảy ra khi ${editMode ? 'cập nhật' : 'thêm'} chứng chỉ!`);
     } finally {
       setIsSubmitting(false);
     }
@@ -348,7 +400,7 @@ const AddCertificationDialog: React.FC<AddCertificationDialogProps> = ({
                   mb: 0.5,
                 }}
               >
-                Thêm chứng chỉ cho giảng viên
+                {editMode ? "Chỉnh sửa chứng chỉ" : "Thêm chứng chỉ cho giảng viên"}
               </Typography>
               <Typography
                 variant="body1"
@@ -361,7 +413,7 @@ const AddCertificationDialog: React.FC<AddCertificationDialogProps> = ({
                   fontWeight: 400,
                 }}
               >
-                Thêm chứng chỉ mới cho giảng viên {lecturer?.fullName}
+                {editMode ? `Chỉnh sửa chứng chỉ cho ${lecturer?.fullName || "giảng viên"}` : `Thêm chứng chỉ mới cho giảng viên ${lecturer?.fullName}`}
               </Typography>
             </Box>
           </Box>
@@ -1096,7 +1148,7 @@ const AddCertificationDialog: React.FC<AddCertificationDialogProps> = ({
                   <span>Đang xử lý...</span>
                 </Box>
               ) : (
-                "Thêm chứng chỉ"
+                editMode ? "Cập nhật chứng chỉ" : "Thêm chứng chỉ"
               )}
             </Button>
           </Box>

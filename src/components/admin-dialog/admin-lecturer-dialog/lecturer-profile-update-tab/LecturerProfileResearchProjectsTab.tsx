@@ -6,6 +6,8 @@ import {
   CalendarToday,
   Category,
   CheckCircle,
+  Delete,
+  Edit,
   ExpandMore,
   Link as LinkIcon,
   Person,
@@ -23,6 +25,7 @@ import {
 } from "@mui/material";
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-toastify";
 import { setLecturerProfileUpdate } from "../../../../redux/slice/LecturerProfileUpdateSlice";
 import { colors } from "../../../../theme/colors";
 import {
@@ -35,6 +38,7 @@ import { API } from "../../../../utils/Fetch";
 import AddResearchProjectDialog from "../AddResearchProjectDialog";
 import ApproveResearchProjectCreateDialog from "../ApproveResearchProjectCreateDialog";
 import ApproveResearchProjectUpdateDialog from "../ApproveResearchProjectUpdateDialog";
+import { GeneralConfirmDialog } from "../../../general-dialog";
 
 interface LecturerProfileResearchProjectsTabProps {
   onAddResearchProject?: () => void;
@@ -44,6 +48,8 @@ interface LecturerProfileResearchProjectsTabProps {
   onRejectResearchProjectUpdate?: (projectData: any) => void;
   canCreateLecturer?: boolean;
   canApproveLecturer?: boolean;
+  canDeleteLecturer?: boolean;
+  canUpdateLecturer?: boolean;
 }
 
 const LecturerProfileResearchProjectsTab: React.FC<
@@ -55,6 +61,8 @@ const LecturerProfileResearchProjectsTab: React.FC<
     // onDeleteResearchProject,
     canCreateLecturer = true,
     canApproveLecturer = true,
+    canDeleteLecturer: _canDeleteLecturer = false,
+    canUpdateLecturer = false,
   },
 ) => {
   // Get lecturer data from Redux
@@ -79,6 +87,18 @@ const LecturerProfileResearchProjectsTab: React.FC<
 
   // State for AddResearchProjectDialog
   const [addResearchProjectDialog, setAddResearchProjectDialog] = useState(false);
+
+  // State for Edit ResearchProject Dialog
+  const [editProjectDialog, setEditProjectDialog] = useState<{
+    open: boolean;
+    data: any;
+  }>({ open: false, data: null });
+
+  // State for Delete Confirmation Dialog
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{
+    open: boolean;
+    data: any;
+  }>({ open: false, data: null });
 
   const formatCurrency = (amount: number) => {
     if (!amount) return "Không xác định";
@@ -147,6 +167,65 @@ const LecturerProfileResearchProjectsTab: React.FC<
       }
     } catch (error) {
       console.error("Error refreshing data:", error);
+    }
+  };
+
+  // Handlers for Edit and Delete
+  const handleEditProject = (project: any) => {
+    setEditProjectDialog({ open: true, data: project });
+  };
+
+  const handleCloseEditProjectDialog = () => {
+    setEditProjectDialog({ open: false, data: null });
+  };
+
+  const handleSuccessEditProject = async () => {
+    // Refresh data after successfully editing project
+    try {
+      const response = await API.admin.getLecturerAllProfile({
+        id: lecturerProfileUpdate.lecturer.id,
+      });
+      if (response.data.success) {
+        dispatch(setLecturerProfileUpdate(response.data.data));
+      }
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    }
+  };
+
+  const handleDeleteProject = (project: any) => {
+    setDeleteConfirmDialog({ open: true, data: project });
+  };
+
+  const handleCloseDeleteConfirmDialog = () => {
+    setDeleteConfirmDialog({ open: false, data: null });
+  };
+
+  const handleConfirmDeleteProject = async () => {
+    if (!deleteConfirmDialog.data?.id) {
+      toast.error("Không tìm thấy thông tin dự án nghiên cứu cần xóa");
+      return;
+    }
+
+    try {
+      const response = await API.lecturer.deleteResearchProject(deleteConfirmDialog.data.id);
+      
+      if (response.data.success) {
+        toast.success("Xóa dự án nghiên cứu thành công!");
+        // Refresh data
+        const refreshResponse = await API.admin.getLecturerAllProfile({
+          id: lecturerProfileUpdate.lecturer.id,
+        });
+        if (refreshResponse.data.success) {
+          dispatch(setLecturerProfileUpdate(refreshResponse.data.data));
+        }
+        setDeleteConfirmDialog({ open: false, data: null });
+      } else {
+        toast.error(response.data.message || "Có lỗi xảy ra khi xóa dự án nghiên cứu");
+      }
+    } catch (error: any) {
+      console.error("❌ Error deleting research project:", error);
+      toast.error(error.response?.data?.message || "Có lỗi xảy ra khi xóa dự án nghiên cứu!");
     }
   };
 
@@ -400,51 +479,49 @@ const LecturerProfileResearchProjectsTab: React.FC<
                       </Typography>
 
                       {/* Edit and Delete buttons in top-right corner */}
-                      {/* <Box sx={{ display: "flex", gap: 1 }}>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() =>
-                            onEditResearchProject?.(projectData.original)
-                          }
-                          sx={{
-                            minWidth: "auto",
-                            width: 32,
-                            height: 32,
-                            borderRadius: "8px",
-                            borderColor: colors.primary[500],
-                            color: colors.primary[500],
-                            "&:hover": {
-                              borderColor: colors.primary[600],
-                              backgroundColor: colors.primary[50],
-                            },
-                          }}
-                        >
-                          <Edit sx={{ fontSize: 16 }} />
-                        </Button>
+                      {canUpdateLecturer && (
+                        <Box sx={{ display: "flex", gap: 1 }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => handleEditProject(projectData.original)}
+                            sx={{
+                              minWidth: "auto",
+                              width: 32,
+                              height: 32,
+                              borderRadius: "8px",
+                              borderColor: colors.primary[500],
+                              color: colors.primary[500],
+                              "&:hover": {
+                                borderColor: colors.primary[600],
+                                backgroundColor: colors.primary[50],
+                              },
+                            }}
+                          >
+                            <Edit sx={{ fontSize: 16 }} />
+                          </Button>
 
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() =>
-                            onDeleteResearchProject?.(projectData.original)
-                          }
-                          sx={{
-                            minWidth: "auto",
-                            width: 32,
-                            height: 32,
-                            borderRadius: "8px",
-                            borderColor: colors.error[500],
-                            color: colors.error[500],
-                            "&:hover": {
-                              borderColor: colors.error[600],
-                              backgroundColor: colors.error[50],
-                            },
-                          }}
-                        >
-                          <Delete sx={{ fontSize: 16 }} />
-                        </Button>
-                      </Box> */}
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => handleDeleteProject(projectData.original)}
+                            sx={{
+                              minWidth: "auto",
+                              width: 32,
+                              height: 32,
+                              borderRadius: "8px",
+                              borderColor: colors.error[500],
+                              color: colors.error[500],
+                              "&:hover": {
+                                borderColor: colors.error[600],
+                                backgroundColor: colors.error[50],
+                              },
+                            }}
+                          >
+                            <Delete sx={{ fontSize: 16 }} />
+                          </Button>
+                        </Box>
+                      )}
                     </Box>
 
                     {/* Chips Section - Compact */}
@@ -865,6 +942,32 @@ const LecturerProfileResearchProjectsTab: React.FC<
         lecturer={lecturerProfileUpdate.lecturer}
         onSuccess={handleSuccessAddResearchProject}
       />
+
+      {/* Edit ResearchProject Dialog */}
+      {editProjectDialog.open && (
+        <AddResearchProjectDialog
+          open={editProjectDialog.open}
+          onClose={handleCloseEditProjectDialog}
+          lecturer={lecturerProfileUpdate.lecturer}
+          onSuccess={handleSuccessEditProject}
+          editMode={true}
+          projectData={editProjectDialog.data}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirmDialog.open && (
+        <GeneralConfirmDialog
+          open={deleteConfirmDialog.open}
+          onClose={handleCloseDeleteConfirmDialog}
+          onConfirm={handleConfirmDeleteProject}
+          title="Xác nhận xóa dự án nghiên cứu"
+          message={`Bạn có chắc chắn muốn xóa dự án nghiên cứu "${deleteConfirmDialog.data?.title || 'này'}" không? Hành động này không thể hoàn tác.`}
+          confirmText="Xóa"
+          cancelText="Hủy"
+          confirmColor="error"
+        />
+      )}
     </div>
   );
 };

@@ -80,6 +80,8 @@ interface AddOwnedCourseDialogProps {
   onClose: () => void;
   lecturer: Lecturer;
   onSuccess: () => void;
+  editMode?: boolean;
+  courseData?: OwnedCourse;
 }
 
 const AddOwnedCourseDialog: React.FC<AddOwnedCourseDialogProps> = ({
@@ -87,6 +89,8 @@ const AddOwnedCourseDialog: React.FC<AddOwnedCourseDialogProps> = ({
   onClose,
   lecturer,
   onSuccess,
+  editMode = false,
+  courseData,
 }) => {
   const [form, setForm] = useState<OwnedCourse>({
     id: "",
@@ -142,8 +146,33 @@ const AddOwnedCourseDialog: React.FC<AddOwnedCourseDialogProps> = ({
         updatedAt: "",
       });
       setSelectedFile(null);
+    } else if (open && editMode && courseData) {
+      // Initialize form with existing course data for edit mode
+      setForm({
+        id: courseData.id || "",
+        title: courseData.title || "",
+        topic: courseData.topic || "",
+        courseType: courseData.courseType || "FORMAL",
+        scale: courseData.scale || "OTHERS",
+        thumbnailUrl: courseData.thumbnailUrl || "",
+        contentUrl: courseData.contentUrl || "",
+        level: courseData.level || "",
+        requirements: courseData.requirements || "",
+        language: courseData.language || "Vietnamese",
+        isOnline: courseData.isOnline ?? true,
+        address: courseData.address || "",
+        price: courseData.price || 0,
+        startDate: courseData.startDate || "",
+        endDate: courseData.endDate || "",
+        description: courseData.description || "",
+        courseUrl: courseData.courseUrl || "",
+        status: courseData.status || "",
+        adminNote: courseData.adminNote || "",
+        createdAt: courseData.createdAt || "",
+        updatedAt: courseData.updatedAt || "",
+      });
     }
-  }, [open]);
+  }, [open, editMode, courseData]);
 
   const handleChange = (
     field: keyof OwnedCourse,
@@ -192,26 +221,47 @@ const AddOwnedCourseDialog: React.FC<AddOwnedCourseDialogProps> = ({
       return;
     }
 
-    if (!lecturer?.id) {
+    if (!editMode && !lecturer?.id) {
       toast.error("Không tìm thấy thông tin giảng viên");
+      return;
+    }
+
+    if (editMode && !courseData?.id) {
+      toast.error("Không tìm thấy thông tin khóa học cần chỉnh sửa");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const response = await API.admin.createOwnedCourse(form, lecturer.id);
-
-      if (response.data.success) {
-        toast.success("Thêm khóa học sở hữu thành công!");
-        onSuccess();
-        onClose();
+      let response;
+      
+      if (editMode) {
+        // Update existing owned course
+        response = await API.lecturer.updateOwnedCourse(form);
+        
+        if (response.data.success) {
+          toast.success("Cập nhật khóa học sở hữu thành công!");
+          onSuccess();
+          onClose();
+        } else {
+          toast.error(response.data.message || "Có lỗi xảy ra khi cập nhật khóa học");
+        }
       } else {
-        toast.error(response.data.message || "Có lỗi xảy ra khi thêm khóa học");
+        // Create new owned course
+        response = await API.admin.createOwnedCourse(form, lecturer.id);
+
+        if (response.data.success) {
+          toast.success("Thêm khóa học sở hữu thành công!");
+          onSuccess();
+          onClose();
+        } else {
+          toast.error(response.data.message || "Có lỗi xảy ra khi thêm khóa học");
+        }
       }
     } catch (error: any) {
-      console.error("Error creating owned course:", error);
+      console.error(`❌ Error ${editMode ? 'updating' : 'creating'} owned course:`, error);
       toast.error(
-        error.response?.data?.message || "Có lỗi xảy ra khi thêm khóa học",
+        error.response?.data?.message || `Có lỗi xảy ra khi ${editMode ? 'cập nhật' : 'thêm'} khóa học!`,
       );
     } finally {
       setIsSubmitting(false);
@@ -372,7 +422,7 @@ const AddOwnedCourseDialog: React.FC<AddOwnedCourseDialogProps> = ({
                   mb: 0.5,
                 }}
               >
-                Thêm khóa học sở hữu cho {lecturer?.fullName}
+                {editMode ? "Chỉnh sửa khóa học sở hữu" : `Thêm khóa học sở hữu cho ${lecturer?.fullName}`}
               </Typography>
               <Typography
                 variant="body2"
@@ -1328,7 +1378,10 @@ const AddOwnedCourseDialog: React.FC<AddOwnedCourseDialogProps> = ({
               },
             }}
           >
-            {isSubmitting ? "Đang tạo..." : "Thêm khóa học"}
+            {isSubmitting 
+              ? (editMode ? "Đang cập nhật..." : "Đang tạo...") 
+              : (editMode ? "Cập nhật khóa học" : "Thêm khóa học")
+            }
           </Button>
         </Box>
       </Box>

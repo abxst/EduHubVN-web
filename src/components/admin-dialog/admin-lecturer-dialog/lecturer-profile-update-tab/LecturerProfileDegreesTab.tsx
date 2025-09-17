@@ -3,6 +3,7 @@ import {
   Business,
   CalendarToday,
   Delete,
+  Edit,
   ExpandMore,
   Grade,
   Link as LinkIcon,
@@ -35,6 +36,7 @@ interface LecturerProfileDegreesTabProps {
   onEditDegree?: (degree: any) => void;
   onDeleteDegree?: (degree: any) => void;
   canCreateLecturer?: boolean;
+  canUpdateLecturer?: boolean;
   canApproveLecturer?: boolean;
   canDeleteLecturer?: boolean;
 }
@@ -45,6 +47,7 @@ const LecturerProfileDegreesTab: React.FC<LecturerProfileDegreesTabProps> = (
     // onEditDegree,
     // onDeleteDegree,
     canCreateLecturer = true,
+    canUpdateLecturer = true,
     canApproveLecturer = true,
     canDeleteLecturer = false,
   },
@@ -71,6 +74,12 @@ const LecturerProfileDegreesTab: React.FC<LecturerProfileDegreesTabProps> = (
 
   // State for AddDegreeDialog
   const [addDegreeDialog, setAddDegreeDialog] = useState(false);
+
+  // State for Edit DegreeDialog
+  const [editDegreeDialog, setEditDegreeDialog] = useState<{
+    open: boolean;
+    degreeData: any;
+  }>({ open: false, degreeData: null });
 
   // State for Delete Confirmation Dialog
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -100,6 +109,25 @@ const LecturerProfileDegreesTab: React.FC<LecturerProfileDegreesTabProps> = (
   const handleSuccessAddDegree = async () => {
     setAddDegreeDialog(false);
     // Refresh lecturer data after adding degree
+    const response = await API.admin.getLecturerAllProfile({
+      id: lecturerProfileUpdate.lecturer.id,
+    });
+    if (response.data.success) {
+      dispatch(setLecturerProfileUpdate(response.data.data));
+    }
+  };
+
+  const handleOpenEditDegreeDialog = (degree: any) => {
+    setEditDegreeDialog({ open: true, degreeData: degree });
+  };
+
+  const handleCloseEditDegreeDialog = () => {
+    setEditDegreeDialog({ open: false, degreeData: null });
+  };
+
+  const handleSuccessEditDegree = async () => {
+    setEditDegreeDialog({ open: false, degreeData: null });
+    // Refresh lecturer data after editing degree
     const response = await API.admin.getLecturerAllProfile({
       id: lecturerProfileUpdate.lecturer.id,
     });
@@ -514,6 +542,29 @@ const LecturerProfileDegreesTab: React.FC<LecturerProfileDegreesTabProps> = (
                       </Button>
                     )}
 
+                    {canUpdateLecturer && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<Edit />}
+                        onClick={() => handleOpenEditDegreeDialog(degreeData.original)}
+                        sx={{
+                          borderColor: "#3B82F6",
+                          color: "#3B82F6",
+                          fontWeight: 600,
+                          textTransform: "none",
+                          borderRadius: 2,
+                          "&:hover": {
+                            borderColor: "#2563EB",
+                            backgroundColor: "#EFF6FF",
+                            transform: "translateY(-1px)",
+                          },
+                        }}
+                      >
+                        Chỉnh sửa
+                      </Button>
+                    )}
+
                     {canDeleteLecturer && (
                       <Button
                         variant="outlined"
@@ -585,6 +636,18 @@ const LecturerProfileDegreesTab: React.FC<LecturerProfileDegreesTabProps> = (
           onClose={() => setAddDegreeDialog(false)}
           lecturer={lecturerProfileUpdate.lecturer}
           onSuccess={handleSuccessAddDegree}
+        />
+      )}
+
+      {/* Edit DegreeDialog */}
+      {editDegreeDialog.open && (
+        <AddDegreeDialog
+          open={editDegreeDialog.open}
+          onClose={handleCloseEditDegreeDialog}
+          lecturer={lecturerProfileUpdate.lecturer}
+          onSuccess={handleSuccessEditDegree}
+          editMode={true}
+          degreeData={editDegreeDialog.degreeData}
         />
       )}
 

@@ -44,6 +44,7 @@ interface LecturerProfileBasicInfoTabProps {
   onRefreshData: () => Promise<void>;
   canUpdate?: boolean;
   canApproveLecturer?: boolean;
+  canDeleteLecturer?: boolean;
 }
 
 const LecturerProfileBasicInfoTab: React.FC<

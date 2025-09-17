@@ -71,6 +71,8 @@ interface AddAttendedCourseDialogProps {
   onClose: () => void;
   lecturer: Lecturer;
   onSuccess: () => void;
+  editMode?: boolean;
+  courseData?: AttendedCourse;
 }
 
 const AddAttendedCourseDialog: React.FC<AddAttendedCourseDialogProps> = ({
@@ -78,6 +80,8 @@ const AddAttendedCourseDialog: React.FC<AddAttendedCourseDialogProps> = ({
   onClose,
   lecturer,
   onSuccess,
+  editMode = false,
+  courseData,
 }) => {
   const [form, setForm] = useState<AttendedCourse>({
     id: "",
@@ -120,8 +124,28 @@ const AddAttendedCourseDialog: React.FC<AddAttendedCourseDialogProps> = ({
         createdAt: "",
         updatedAt: "",
       });
+    } else if (open && editMode && courseData) {
+      // Initialize form with existing course data for edit mode
+      setForm({
+        id: courseData.id || "",
+        title: courseData.title || "",
+        topic: courseData.topic || "",
+        organizer: courseData.organizer || "",
+        courseType: courseData.courseType || "FORMAL",
+        scale: courseData.scale || "UNIVERSITY",
+        startDate: courseData.startDate || "",
+        endDate: courseData.endDate || "",
+        numberOfHour: courseData.numberOfHour || 0,
+        location: courseData.location || "",
+        description: courseData.description || "",
+        courseUrl: courseData.courseUrl || "",
+        status: courseData.status || "",
+        adminNote: courseData.adminNote || "",
+        createdAt: courseData.createdAt || "",
+        updatedAt: courseData.updatedAt || "",
+      });
     }
-  }, [open]);
+  }, [open, editMode, courseData]);
 
   const handleChange = (field: keyof AttendedCourse, value: any) => {
     setForm((prev) => ({
@@ -137,26 +161,47 @@ const AddAttendedCourseDialog: React.FC<AddAttendedCourseDialogProps> = ({
       return;
     }
 
-    if (!lecturer?.id) {
+    if (!editMode && !lecturer?.id) {
       toast.error("Không tìm thấy thông tin giảng viên");
+      return;
+    }
+
+    if (editMode && !courseData?.id) {
+      toast.error("Không tìm thấy thông tin khóa học cần chỉnh sửa");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const response = await API.admin.createAttendedCourse(form, lecturer.id);
-
-      if (response.data.success) {
-        toast.success("Thêm khóa học đã tham gia thành công!");
-        onSuccess();
-        onClose();
+      let response;
+      
+      if (editMode) {
+        // Update existing attended course
+        response = await API.lecturer.updateAttendedCourse(form);
+        
+        if (response.data.success) {
+          toast.success("Cập nhật khóa học đã tham gia thành công!");
+          onSuccess();
+          onClose();
+        } else {
+          toast.error(response.data.message || "Có lỗi xảy ra khi cập nhật khóa học");
+        }
       } else {
-        toast.error(response.data.message || "Có lỗi xảy ra khi thêm khóa học");
+        // Create new attended course
+        response = await API.admin.createAttendedCourse(form, lecturer.id);
+
+        if (response.data.success) {
+          toast.success("Thêm khóa học đã tham gia thành công!");
+          onSuccess();
+          onClose();
+        } else {
+          toast.error(response.data.message || "Có lỗi xảy ra khi thêm khóa học");
+        }
       }
     } catch (error: any) {
-      console.error("Error creating attended course:", error);
+      console.error(`❌ Error ${editMode ? 'updating' : 'creating'} attended course:`, error);
       toast.error(
-        error.response?.data?.message || "Có lỗi xảy ra khi thêm khóa học",
+        error.response?.data?.message || `Có lỗi xảy ra khi ${editMode ? 'cập nhật' : 'thêm'} khóa học!`,
       );
     } finally {
       setIsSubmitting(false);
@@ -317,7 +362,7 @@ const AddAttendedCourseDialog: React.FC<AddAttendedCourseDialogProps> = ({
                   mb: 0.5,
                 }}
               >
-                Thêm khóa học đã tham gia cho {lecturer?.fullName}
+                {editMode ? "Chỉnh sửa khóa học đã tham gia" : `Thêm khóa học đã tham gia cho ${lecturer?.fullName}`}
               </Typography>
               <Typography
                 variant="body2"
@@ -1055,7 +1100,10 @@ const AddAttendedCourseDialog: React.FC<AddAttendedCourseDialogProps> = ({
               },
             }}
           >
-            {isSubmitting ? "Đang tạo..." : "Thêm khóa học"}
+            {isSubmitting 
+              ? (editMode ? "Đang cập nhật..." : "Đang tạo...") 
+              : (editMode ? "Cập nhật khóa học" : "Thêm khóa học")
+            }
           </Button>
         </Box>
       </Box>

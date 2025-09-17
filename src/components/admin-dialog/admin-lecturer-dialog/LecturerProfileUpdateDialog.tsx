@@ -66,14 +66,17 @@ const LecturerProfileUpdateDialog = ({
   const userProfile = useSelector((state: any) => state.userProfile);
 
   // Permission checks
-  const canCreateLecturer = userProfile?.permissions?.includes("LECTURER_CREATE") || false;
-  const canUpdateLecturer = userProfile?.permissions?.includes("LECTURER_UPDATE") || false;
-  const canApproveLecturer = userProfile?.permissions?.includes("LECTURER_APPROVE") || false;
-  const canDeleteLecturer = userProfile?.permissions?.includes("LECTURER_DELETE") || false;
+  const isAdmin = userProfile?.role === "ADMIN";
+  const canCreateLecturer = isAdmin || userProfile?.permissions?.includes("LECTURER_CREATE") || false;
+  const canUpdateLecturer = isAdmin || userProfile?.permissions?.includes("LECTURER_UPDATE") || false;
+  const canApproveLecturer = isAdmin || userProfile?.permissions?.includes("LECTURER_APPROVE") || false;
+  const canDeleteLecturer = isAdmin || userProfile?.permissions?.includes("LECTURER_DELETE") || false;
 
   // Debug permissions
   console.log("🔍 Debug Permissions:", {
     userProfile,
+    role: userProfile?.role,
+    isAdmin,
     permissions: userProfile?.permissions,
     canCreateLecturer,
     canUpdateLecturer,
@@ -321,6 +324,7 @@ const LecturerProfileUpdateDialog = ({
                 onRefreshData={handleRefreshData}
                 canUpdate={canUpdateLecturer}
                 canApproveLecturer={canApproveLecturer}
+                canDeleteLecturer={canDeleteLecturer}
               />
             </TabPanel>
             <TabPanel value={tabValue} index={1}>
@@ -329,6 +333,7 @@ const LecturerProfileUpdateDialog = ({
                 onEditDegree={handleEditDegree}
                 onDeleteDegree={handleDeleteDegree}
                 canCreateLecturer={canCreateLecturer}
+                canUpdateLecturer={canUpdateLecturer}
                 canApproveLecturer={canApproveLecturer}
                 canDeleteLecturer={canDeleteLecturer}
               />
@@ -339,7 +344,9 @@ const LecturerProfileUpdateDialog = ({
                 onEditCertification={handleEditCertification}
                 onDeleteCertification={handleDeleteCertification}
                 canCreateLecturer={canCreateLecturer}
+                canUpdateLecturer={canUpdateLecturer}
                 canApproveLecturer={canApproveLecturer}
+                canDeleteLecturer={canDeleteLecturer}
               />
             </TabPanel>
             <TabPanel value={tabValue} index={3}>
@@ -352,6 +359,8 @@ const LecturerProfileUpdateDialog = ({
                 onDeleteAttendedCourse={handleDeleteAttendedCourse}
                 canCreateLecturer={canCreateLecturer}
                 canApproveLecturer={canApproveLecturer}
+                canDeleteLecturer={canDeleteLecturer}
+                canUpdateLecturer={canUpdateLecturer}
               />
             </TabPanel>
             <TabPanel value={tabValue} index={4}>
@@ -367,6 +376,8 @@ const LecturerProfileUpdateDialog = ({
                 }
                 canCreateLecturer={canCreateLecturer}
                 canApproveLecturer={canApproveLecturer}
+                canDeleteLecturer={canDeleteLecturer}
+                canUpdateLecturer={canUpdateLecturer}
               />
             </TabPanel>
           </>

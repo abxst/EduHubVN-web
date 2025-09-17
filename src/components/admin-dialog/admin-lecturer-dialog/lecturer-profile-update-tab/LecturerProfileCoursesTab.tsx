@@ -2,6 +2,8 @@ import {
   Add,
   CalendarToday,
   Category,
+  Delete,
+  Edit,
   ExpandMore,
   Group,
   LocationOn,
@@ -16,15 +18,11 @@ import {
   Box,
   Button,
   Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   Typography,
 } from "@mui/material";
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
+import { toast } from "react-toastify";
 import { colors } from "../../../../theme/colors";
 import {
   formatDateToVietnamTime,
@@ -41,6 +39,7 @@ import ApproveAttendedCourseCreateDialog from "../ApproveAttendedCourseCreateDia
 import ApproveAttendedCourseUpdateDialog from "../ApproveAttendedCourseUpdateDialog";
 import ApproveOwnedCourseCreateDialog from "../ApproveOwnedCourseCreateDialog";
 import ApproveOwnedCourseUpdateDialog from "../ApproveOwnedCourseUpdateDialog";
+import { GeneralConfirmDialog } from "../../../general-dialog";
 
 interface LecturerProfileCoursesTabProps {
   onAddOwnedCourse?: () => void;
@@ -51,6 +50,8 @@ interface LecturerProfileCoursesTabProps {
   onDeleteAttendedCourse?: (course: any) => void;
   canCreateLecturer?: boolean;
   canApproveLecturer?: boolean;
+  canDeleteLecturer?: boolean;
+  canUpdateLecturer?: boolean;
 }
 
 const LecturerProfileCoursesTab: React.FC<LecturerProfileCoursesTabProps> = ({
@@ -58,10 +59,12 @@ const LecturerProfileCoursesTab: React.FC<LecturerProfileCoursesTabProps> = ({
   // onAddAttendedCourse,
   // onEditOwnedCourse,
   // onEditAttendedCourse,
-  onDeleteOwnedCourse,
-  onDeleteAttendedCourse,
+  // onDeleteOwnedCourse,
+  // onDeleteAttendedCourse,
   canCreateLecturer = true,
   canApproveLecturer = true,
+  canDeleteLecturer: _canDeleteLecturer = false,
+  canUpdateLecturer = false,
 }) => {
   // Get lecturer data from Redux
   const lecturerProfileUpdate = useSelector(
@@ -71,10 +74,6 @@ const LecturerProfileCoursesTab: React.FC<LecturerProfileCoursesTabProps> = ({
   const attendedCourses = lecturerProfileUpdate?.attendedCourses || [];
 
   const dispatch = useDispatch();
-
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<any>(null);
-  const [deleteType, _setDeleteType] = useState<"owned" | "attended">("owned");
 
   // State for Add dialogs
   const [addOwnedCourseDialog, setAddOwnedCourseDialog] = useState(false);
@@ -105,6 +104,24 @@ const LecturerProfileCoursesTab: React.FC<LecturerProfileCoursesTabProps> = ({
       open: boolean;
       data: any;
     }>({ open: false, data: null });
+
+  // State for Edit dialogs
+  const [editOwnedCourseDialog, setEditOwnedCourseDialog] = useState<{
+    open: boolean;
+    data: any;
+  }>({ open: false, data: null });
+
+  const [editAttendedCourseDialog, setEditAttendedCourseDialog] = useState<{
+    open: boolean;
+    data: any;
+  }>({ open: false, data: null });
+
+  // State for Delete Confirmation Dialog
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{
+    open: boolean;
+    data: any;
+    type: "owned" | "attended";
+  }>({ open: false, data: null, type: "owned" });
 
   // Utility functions
   const formatDate = (dateString: string) => {
@@ -210,32 +227,96 @@ const LecturerProfileCoursesTab: React.FC<LecturerProfileCoursesTabProps> = ({
     }
   };
 
-  // const handleDelete = (item: any, type: "owned" | "attended") => {
-  //   setItemToDelete(item);
-  //   setDeleteType(type);
-  //   setDeleteConfirmOpen(true);
-  // };
+  // Edit course handlers
+  const handleEditOwnedCourse = (course: any) => {
+    setEditOwnedCourseDialog({ open: true, data: course });
+  };
 
-  const handleConfirmDelete = async () => {
-    if (!itemToDelete) return;
+  const handleCloseEditOwnedCourseDialog = () => {
+    setEditOwnedCourseDialog({ open: false, data: null });
+  };
 
+  const handleSuccessEditOwnedCourse = async () => {
+    // Refresh data after successfully editing owned course
     try {
-      if (deleteType === "owned" && onDeleteOwnedCourse) {
-        onDeleteOwnedCourse(itemToDelete);
-      } else if (deleteType === "attended" && onDeleteAttendedCourse) {
-        onDeleteAttendedCourse(itemToDelete);
+      const response = await API.admin.getLecturerAllProfile({
+        id: lecturerProfileUpdate.lecturer.id,
+      });
+      if (response.data.success) {
+        dispatch(setLecturerProfileUpdate(response.data.data));
       }
     } catch (error) {
-      console.error("Error deleting course:", error);
-    } finally {
-      setDeleteConfirmOpen(false);
-      setItemToDelete(null);
+      console.error("Error refreshing data:", error);
     }
   };
 
-  const handleCancelDelete = () => {
-    setDeleteConfirmOpen(false);
-    setItemToDelete(null);
+  const handleEditAttendedCourse = (course: any) => {
+    setEditAttendedCourseDialog({ open: true, data: course });
+  };
+
+  const handleCloseEditAttendedCourseDialog = () => {
+    setEditAttendedCourseDialog({ open: false, data: null });
+  };
+
+  const handleSuccessEditAttendedCourse = async () => {
+    // Refresh data after successfully editing attended course
+    try {
+      const response = await API.admin.getLecturerAllProfile({
+        id: lecturerProfileUpdate.lecturer.id,
+      });
+      if (response.data.success) {
+        dispatch(setLecturerProfileUpdate(response.data.data));
+      }
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    }
+  };
+
+  // Delete course handlers
+  const handleDeleteOwnedCourse = (course: any) => {
+    setDeleteConfirmDialog({ open: true, data: course, type: "owned" });
+  };
+
+  const handleDeleteAttendedCourse = (course: any) => {
+    setDeleteConfirmDialog({ open: true, data: course, type: "attended" });
+  };
+
+  const handleCloseDeleteConfirmDialog = () => {
+    setDeleteConfirmDialog({ open: false, data: null, type: "owned" });
+  };
+
+  const handleConfirmDeleteCourse = async () => {
+    if (!deleteConfirmDialog.data?.id) {
+      toast.error("Không tìm thấy thông tin khóa học cần xóa");
+      return;
+    }
+
+    try {
+      let response;
+      
+      if (deleteConfirmDialog.type === "owned") {
+        response = await API.lecturer.deleteOwnedCourse(deleteConfirmDialog.data.id);
+      } else {
+        response = await API.lecturer.deleteAttendedCourse(deleteConfirmDialog.data.id);
+      }
+      
+      if (response.data.success) {
+        toast.success(`Xóa khóa học ${deleteConfirmDialog.type === "owned" ? "sở hữu" : "đã tham gia"} thành công!`);
+        // Refresh data
+        const refreshResponse = await API.admin.getLecturerAllProfile({
+          id: lecturerProfileUpdate.lecturer.id,
+        });
+        if (refreshResponse.data.success) {
+          dispatch(setLecturerProfileUpdate(refreshResponse.data.data));
+        }
+        setDeleteConfirmDialog({ open: false, data: null, type: "owned" });
+      } else {
+        toast.error(response.data.message || "Có lỗi xảy ra khi xóa khóa học");
+      }
+    } catch (error: any) {
+      console.error("❌ Error deleting course:", error);
+      toast.error(error.response?.data?.message || "Có lỗi xảy ra khi xóa khóa học!");
+    }
   };
 
   const renderCourseCard = (item: any, isOwned: boolean = false) => {
@@ -388,6 +469,72 @@ const LecturerProfileCoursesTab: React.FC<LecturerProfileCoursesTabProps> = ({
           }}
         >
           <Box className="p-6">
+            {/* Edit and Delete buttons */}
+            {canUpdateLecturer && (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: 1,
+                  mb: 3,
+                  pb: 2,
+                  borderBottom: "1px solid #e2e8f0",
+                }}
+              >
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => {
+                    if (isOwned) {
+                      handleEditOwnedCourse(currentData);
+                    } else {
+                      handleEditAttendedCourse(currentData);
+                    }
+                  }}
+                  sx={{
+                    minWidth: "auto",
+                    width: 32,
+                    height: 32,
+                    borderRadius: "8px",
+                    borderColor: colors.primary[500],
+                    color: colors.primary[500],
+                    "&:hover": {
+                      borderColor: colors.primary[600],
+                      backgroundColor: colors.primary[50],
+                    },
+                  }}
+                >
+                  <Edit sx={{ fontSize: 16 }} />
+                </Button>
+
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => {
+                    if (isOwned) {
+                      handleDeleteOwnedCourse(currentData);
+                    } else {
+                      handleDeleteAttendedCourse(currentData);
+                    }
+                  }}
+                  sx={{
+                    minWidth: "auto",
+                    width: 32,
+                    height: 32,
+                    borderRadius: "8px",
+                    borderColor: colors.error[500],
+                    color: colors.error[500],
+                    "&:hover": {
+                      borderColor: colors.error[600],
+                      backgroundColor: colors.error[50],
+                    },
+                  }}
+                >
+                  <Delete sx={{ fontSize: 16 }} />
+                </Button>
+              </Box>
+            )}
+
             {/* Course Information */}
             <div className="mb-6">
               {/* Thumbnail and Description Row (only for owned courses) */}
@@ -1045,65 +1192,6 @@ const LecturerProfileCoursesTab: React.FC<LecturerProfileCoursesTabProps> = ({
         )}
       </div>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={deleteConfirmOpen}
-        onClose={handleCancelDelete}
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            minWidth: 400,
-          },
-        }}
-      >
-        <DialogTitle sx={{ fontWeight: 600, color: colors.primary[700] }}>
-          Xác nhận xóa
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ color: colors.text.secondary, mb: 2 }}>
-            Bạn có chắc chắn muốn xóa{" "}
-            {deleteType === "owned"
-              ? "khóa học sở hữu"
-              : "khóa học đã tham gia"}{" "}
-            này không? Hành động này không thể hoàn tác.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ p: 3, gap: 1 }}>
-          <Button
-            onClick={handleCancelDelete}
-            variant="outlined"
-            sx={{
-              borderColor: colors.primary[300],
-              color: colors.primary[600],
-              fontWeight: 600,
-              borderRadius: 2,
-              textTransform: "none",
-              "&:hover": {
-                borderColor: colors.primary[400],
-                backgroundColor: colors.primary[50],
-              },
-            }}
-          >
-            Hủy
-          </Button>
-          <Button
-            onClick={handleConfirmDelete}
-            variant="contained"
-            color="error"
-            sx={{
-              fontWeight: 600,
-              borderRadius: 2,
-              textTransform: "none",
-              "&:hover": {
-                backgroundColor: "#d32f2f",
-              },
-            }}
-          >
-            Xác nhận xóa
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       {/* ApproveOwnedCourseCreateDialog */}
       {approveOwnedCreateDialog.open && (
         <ApproveOwnedCourseCreateDialog
@@ -1157,6 +1245,44 @@ const LecturerProfileCoursesTab: React.FC<LecturerProfileCoursesTabProps> = ({
           onClose={() => setAddAttendedCourseDialog(false)}
           lecturer={lecturerProfileUpdate.lecturer}
           onSuccess={handleSuccessAddAttendedCourse}
+        />
+      )}
+
+      {/* Edit Owned Course Dialog */}
+      {editOwnedCourseDialog.open && (
+        <AddOwnedCourseDialog
+          open={editOwnedCourseDialog.open}
+          onClose={handleCloseEditOwnedCourseDialog}
+          lecturer={lecturerProfileUpdate.lecturer}
+          onSuccess={handleSuccessEditOwnedCourse}
+          editMode={true}
+          courseData={editOwnedCourseDialog.data}
+        />
+      )}
+
+      {/* Edit Attended Course Dialog */}
+      {editAttendedCourseDialog.open && (
+        <AddAttendedCourseDialog
+          open={editAttendedCourseDialog.open}
+          onClose={handleCloseEditAttendedCourseDialog}
+          lecturer={lecturerProfileUpdate.lecturer}
+          onSuccess={handleSuccessEditAttendedCourse}
+          editMode={true}
+          courseData={editAttendedCourseDialog.data}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirmDialog.open && (
+        <GeneralConfirmDialog
+          open={deleteConfirmDialog.open}
+          onClose={handleCloseDeleteConfirmDialog}
+          title="Xác nhận xóa"
+          message={`Bạn có chắc chắn muốn xóa khóa học ${deleteConfirmDialog.type === "owned" ? "sở hữu" : "đã tham gia"} này không? Hành động này không thể hoàn tác.`}
+          onConfirm={handleConfirmDeleteCourse}
+          confirmText="Xác nhận xóa"
+          cancelText="Hủy"
+          confirmColor="error"
         />
       )}
     </div>

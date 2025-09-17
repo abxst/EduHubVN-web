@@ -2,6 +2,8 @@ import {
   Add,
   Assignment,
   CalendarToday,
+  Delete,
+  Edit,
   ExpandMore,
   Grade,
   Link as LinkIcon,
@@ -29,13 +31,17 @@ import { API } from "../../../../utils/Fetch";
 import AddCertificationDialog from "../AddCertificationDialog";
 import ApproveCertificationCreateDialog from "../ApproveCertificationCreateDialog";
 import ApproveCertificationUpdateDialog from "../ApproveCertificationUpdateDialog";
+import { toast } from "react-toastify";
+import GeneralConfirmDialog from "../../../general-dialog/GeneralConfirmDialog";
 
 interface LecturerProfileCertificationsTabProps {
   onAddCertification?: () => void;
   onEditCertification?: (certification: any) => void;
   onDeleteCertification?: (certification: any) => void;
   canCreateLecturer?: boolean;
+  canUpdateLecturer?: boolean;
   canApproveLecturer?: boolean;
+  canDeleteLecturer?: boolean;
 }
 
 const LecturerProfileCertificationsTab: React.FC<
@@ -45,7 +51,9 @@ const LecturerProfileCertificationsTab: React.FC<
     // onAddCertification,
     // onEditCertification, onDeleteCertification
     canCreateLecturer = true,
+    canUpdateLecturer = true,
     canApproveLecturer = true,
+    canDeleteLecturer = false,
   },
 ) => {
   // Get lecturer data from Redux
@@ -75,6 +83,19 @@ const LecturerProfileCertificationsTab: React.FC<
 
   // State for AddCertificationDialog
   const [addCertificationDialog, setAddCertificationDialog] = useState(false);
+
+  // State for Edit CertificationDialog
+  const [editCertificationDialog, setEditCertificationDialog] = useState<{
+    open: boolean;
+    certificationData: any;
+  }>({ open: false, certificationData: null });
+
+  // State for Delete Confirmation Dialog
+  const [deleteCertificationDialog, setDeleteCertificationDialog] = useState<{
+    open: boolean;
+    certification: any;
+    loading: boolean;
+  }>({ open: false, certification: null, loading: false });
 
   // Dialog handlers
   const handleOpenApproveCertificationCreateDialog = (
@@ -125,6 +146,70 @@ const LecturerProfileCertificationsTab: React.FC<
     });
     if (response.data.success) {
       dispatch(setLecturerProfileUpdate(response.data.data));
+    }
+  };
+
+  // Edit certification handlers
+  const handleOpenEditCertificationDialog = (certification: any) => {
+    setEditCertificationDialog({ open: true, certificationData: certification });
+  };
+
+  const handleCloseEditCertificationDialog = () => {
+    setEditCertificationDialog({ open: false, certificationData: null });
+  };
+
+  const handleSuccessEditCertification = async () => {
+    setEditCertificationDialog({ open: false, certificationData: null });
+    // Refresh lecturer data after editing certification
+    const response = await API.admin.getLecturerAllProfile({
+      id: lecturerProfileUpdate.lecturer.id,
+    });
+    if (response.data.success) {
+      dispatch(setLecturerProfileUpdate(response.data.data));
+    }
+  };
+
+  // Delete certification handlers
+  const handleOpenDeleteCertificationDialog = (certification: any) => {
+    setDeleteCertificationDialog({ open: true, certification, loading: false });
+  };
+
+  const handleCloseDeleteCertificationDialog = () => {
+    setDeleteCertificationDialog({ open: false, certification: null, loading: false });
+  };
+
+  const handleConfirmDeleteCertification = async () => {
+    if (!deleteCertificationDialog.certification) return;
+
+    setDeleteCertificationDialog(prev => ({ ...prev, loading: true }));
+    
+    try {
+      // Call API to delete certification
+      const response = await API.admin.deleteCertification({
+        id: deleteCertificationDialog.certification.id,
+      });
+      
+      if (response.data.success) {
+        // Refresh lecturer data after deleting certification
+        toast.success("Xóa chứng chỉ thành công");
+        const refreshResponse = await API.admin.getLecturerAllProfile({
+          id: lecturerProfileUpdate.lecturer.id,
+        });
+        
+        if (refreshResponse.data.success) {
+          dispatch(setLecturerProfileUpdate(refreshResponse.data.data));
+        }
+        
+        handleCloseDeleteCertificationDialog();
+      } else {
+        console.error("Failed to delete certification:", response.data.message);
+        toast.error("Có lỗi xảy ra khi xóa chứng chỉ");
+      }
+    } catch (error) {
+      console.error("Error deleting certification:", error);
+      toast.error("Có lỗi xảy ra khi xóa chứng chỉ");
+    } finally {
+      setDeleteCertificationDialog(prev => ({ ...prev, loading: false }));
     }
   };
 
@@ -477,6 +562,52 @@ const LecturerProfileCertificationsTab: React.FC<
                       Xem tài liệu
                     </Button>
                   )}
+
+                  {canUpdateLecturer && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<Edit />}
+                      onClick={() => handleOpenEditCertificationDialog(item.original || item)}
+                      sx={{
+                        borderColor: "#3B82F6",
+                        color: "#3B82F6",
+                        fontWeight: 600,
+                        textTransform: "none",
+                        borderRadius: 2,
+                        "&:hover": {
+                          borderColor: "#2563EB",
+                          backgroundColor: "#EFF6FF",
+                          transform: "translateY(-1px)",
+                        },
+                      }}
+                    >
+                      Chỉnh sửa
+                    </Button>
+                  )}
+
+                  {canDeleteLecturer && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<Delete />}
+                      onClick={() => handleOpenDeleteCertificationDialog(item.original || item)}
+                      sx={{
+                        borderColor: "#EF4444",
+                        color: "#EF4444",
+                        fontWeight: 600,
+                        textTransform: "none",
+                        borderRadius: 2,
+                        "&:hover": {
+                          borderColor: "#DC2626",
+                          backgroundColor: "#FEF2F2",
+                          transform: "translateY(-1px)",
+                        },
+                      }}
+                    >
+                      Xóa
+                    </Button>
+                  )}
                 </div>
                 {/* Thông tin thời gian tạo/cập nhật */}
                 <div style={{ marginTop: 24, textAlign: "right" }}>
@@ -527,6 +658,34 @@ const LecturerProfileCertificationsTab: React.FC<
           onSuccess={handleSuccessAddCertification}
         />
       )}
+
+      {/* Edit CertificationDialog */}
+      {editCertificationDialog.open && (
+        <AddCertificationDialog
+          open={editCertificationDialog.open}
+          onClose={handleCloseEditCertificationDialog}
+          lecturer={lecturerProfileUpdate.lecturer}
+          onSuccess={handleSuccessEditCertification}
+          editMode={true}
+          certificationData={editCertificationDialog.certificationData}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <GeneralConfirmDialog
+        open={deleteCertificationDialog.open}
+        title="Xác nhận xóa chứng chỉ"
+        message={`Bạn có chắc chắn muốn xóa chứng chỉ "${deleteCertificationDialog.certification?.name}" không? Hành động này không thể hoàn tác.`}
+        confirmText="Xóa"
+        cancelText="Hủy"
+        confirmColor="error"
+        alertSeverity="error"
+        showAlert={true}
+        alertTitle="Cảnh báo"
+        loading={deleteCertificationDialog.loading}
+        onClose={handleCloseDeleteCertificationDialog}
+        onConfirm={handleConfirmDeleteCertification}
+      />
     </div>
   );
 };
